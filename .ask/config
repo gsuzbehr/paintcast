@@ -8,7 +8,7 @@
           "apis": {
             "custom": {
               "endpoint": {
-                "uri": "ask-paint-cast"
+                "uri": "ask-paint-cast-by-behr"
               }
             }
           }
