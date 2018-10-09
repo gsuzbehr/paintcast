@@ -1,103 +1,90 @@
-/* eslint-disable  func-names */
-/* eslint-disable  no-console */
-
 const Alexa = require('ask-sdk-core');
+
+// 1. Text strings ================================================================================
+//    Modify these strings and messages to change the behavior of your Lambda function
+
+const welcomeOutput = "Welcome to Paint Cast by Behr.  I can help you with your project.  What city do you live in?";
+const welcomeReprompt = "I can help you with your project.  What city do you live in?";
+const helpOutput = 'You can start by asking "is today a good day to start my project".';
+const helpReprompt = 'Try saying "is today a good day to start my project".';
+
+
+// 1. Intent Handlers =============================================
 
 const LaunchRequestHandler = {
   canHandle(handlerInput) {
-    console.log('LaunchRequestHandler');
-    return handlerInput.requestEnvelope.request.type === 'LaunchRequest';
+    const request = handlerInput.requestEnvelope.request;
+    return request.type === 'LaunchRequest';
   },
   handle(handlerInput) {
-    /**
-    const speechText = 'Hello there. What is your name?';
-    const repromptText = 'Can you tell me your name?';
-
-    return handlerInput.responseBuilder
-      .speak(speechText)
-      .reprompt(repromptText)
-      .withSimpleCard('Example Card Title', "Example card body content.")
-      .getResponse();
-    **/
-    const speechText = 'Welcome to Paint Cast by Behr. I can help you with your coatings project. What city do you live in?';
-    const speechReprompt = 'What city do you live in?';
-    return handlerInput.responseBuilder
-      .speak(speechText)
-      .reprompt(speechReprompt)
+    const responseBuilder = handlerInput.responseBuilder;
+    return responseBuilder
+      .speak(welcomeOutput)
+      .reprompt(welcomeReprompt)
       .getResponse();
   },
 };
 
-const CityIntetHandler = {
+const InProgressPlanMyProjectHandler = {
   canHandle(handlerInput) {
-    console.log('CityIntetHandler');
     const request = handlerInput.requestEnvelope.request;
-    console.log("CityIntetHandler request.intent.slots.cityName.value: " + handlerInput.requestEnvelope.request.intent.slots.cityName.value);
-    console.log("CityIntetHandler request.intent.name: " + handlerInput.requestEnvelope.request.intent.name);
-    console.log("CityIntetHandler request.dialogState: " + handlerInput.requestEnvelope.request.dialogState);
-    console.log("CityIntetHandler 1");
-
-    return request.type === 'IntentRequest'
-      && request.intent.name === 'CityIntent'
-      && request.dialogState !== 'COMPLETED';
+    return request.type === 'IntentRequest' &&
+      request.intent.name === 'PlanMyProjectIntent' &&
+      request.dialogState !== 'COMPLETED';
   },
   handle(handlerInput) {
     const currentIntent = handlerInput.requestEnvelope.request.intent;
-    let prompt = '';
-    console.log("CityIntetHandler 2");
-
-    for (const slotName in currentIntent.slots) {
-      console.log("CityIntetHandler 3");
-
-      if (Object.prototype.hasOwnProperty.call(currentIntent.slots, slotName)) {
-        console.log("CityIntetHandler 4");
-        const currentSlot = currentIntent.slots[slotName];
-        console.log("CityIntentHandler currentIntent.slots.cityName: " + currentIntent.slots.cityName.value);
-
-        if (currentSlot.confirmationStatus !== 'CONFIRMED') {
-          console.log("CityIntetHandler 5");
-          console.log("CityIntetHandler not confirmed");
-        } else {
-          console.log("CityIntetHandler 6");
-          console.log("CityIntetHandler confirmed");
-        }
-
-
-      }
-    }
-
     return handlerInput.responseBuilder
       .addDelegateDirective(currentIntent)
       .getResponse();
   },
 };
 
-const CompletedCityMatchIntent = {
+const CompletedPlanMyProjectHandler = {
   canHandle(handlerInput) {
-    console.log('CompletedCityMatchIntent');
+    console.log("CompletedPlanMyProjectHandler 1");
     const request = handlerInput.requestEnvelope.request;
-    console.log("CityIntetHandler request.intent.slots.cityName.value: " + handlerInput.requestEnvelope.request.intent.slots.cityName.value);
-    console.log("CompletedCityMatchIntent request.intent.name: " + handlerInput.requestEnvelope.request.intent.name);
-    console.log("CompletedCityMatchIntent request.dialogState: " + handlerInput.requestEnvelope.request.dialogState);
-    console.log("CompletedCityMatchIntent 1");
-
-    return request.type === 'IntentRequest'
-      && request.intent.name === 'CityIntent'
-      && request.dialogState === 'COMPLETED';
+    return request.type === 'IntentRequest' && request.intent.name === 'PlanMyProjectIntent';
   },
   async handle(handlerInput) {
+    console.log('Plan My Trip - handle');
+
+    const responseBuilder = handlerInput.responseBuilder;
     const filledSlots = handlerInput.requestEnvelope.request.intent.slots;
     const slotValues = getSlotValues(filledSlots);
-    const cityIntentName = handlerInput.requestEnvelope.request.intent.slots.cityName.value;
-    var currentDay = new Date().getDay();
+    console.log("CompletedPlanMyProjectHandler 2");
 
-    let weatherAPIUrl = `http://api.openweathermap.org/data/2.5/forecast?appid=c5c5f37bd77009ef9dd19707a10277f1&units=imperial&CNT=5&q=${cityIntentName},us`;
-    let outputSpeech = cityIntentName;
-    //const cityMatchOptions = buildPetMatchOptions(slotValues);
 
-    console.log("CompletedCityMatchIntent 2");
+    const cityName = slotValues.projectCity.synonym;
+    const startDate = slotValues.projectDate.synonym;
+    const selectedProject = slotValues.projectType.synonym;
+
+    let weatherAPIUrl = `http://api.openweathermap.org/data/2.5/forecast?appid=c5c5f37bd77009ef9dd19707a10277f1&units=imperial&CNT=5&q=${cityName},us`;
+    let currentTemperature = '';
+    let outputSpeech = '';
+    let minTemp = 40;
+    let maxTemp = 90;
+    let mainWeather = 'Clear';
+    var projectBoolean = 1;  //0 is false
+    var newDate = new Date();
+    var todaysDate = newDate.getDate();
+    var startDayNumber = startDate.substring(8, 10);
+  
+
+    console.log("cityName: " + cityName);
+    console.log("startDate: " + startDate);
+    console.log("day: " + startDate.substring(8, 10));
+    console.log("todays date: " + todaysDate);
+    console.log("selectedProject: " + selectedProject);
     console.log("weatherAPIUrl: " + weatherAPIUrl);
-    console.log("currentDay: " + currentDay);
+    console.log("project boolean: " + Boolean(projectBoolean));
+
+
+
+
+
+
+
 
     await getRemoteData(weatherAPIUrl).then((response) => {
       const data = JSON.parse(response);
@@ -109,101 +96,136 @@ const CompletedCityMatchIntent = {
       let day4 = '';
       let day5 = '';
 
-      if (currentDay == 1) {
-        currentDay = 'Sunday';
-      } else if (currentDay == 2) {
-        currentDay = 'Monday';
-      } else if (currentDay == 3) {
-        currentDay = 'Tuesday';
-      } else if (currentDay == 4) {
-        currentDay = 'Wednesday';
-      } else if (currentDay == 5) {
-        currentDay = 'Thursday';
-      } else if (currentDay == 6) {
-        currentDay = 'Friday';
-      } else if (currentDay == 7) {
-        currentDay = 'Saturday';
+      //search date - actual date = index number
+      var index = 0;
+
+      console.log("startDayNumber: " + startDayNumber);
+      console.log("todaysDate: " + todaysDate);
+
+      if (startDayNumber > todaysDate) {
+        index = startDayNumber - todaysDate;
       }
 
-      outputSpeech = "Today is : " + currentDay + ".  Your city is " + cityName;
+      
+      console.log("index: " + index);
 
-      if ((data.main.temp > 50) || (data.main.temp > 90)) {
-        outputSpeech = `You live in ${data.name} and the current temperature is ${data.main.temp} degrees fahrenheit.  Congratulations, you can paint today!`;
+      currentTemperature = data.list[index].main.temp;
+
+
+      //outputSpeech = "Today is : " + currentDay + ".  Your city is " + cityName;
+      console.log("CompletedPlanMyProjectHandler 3");
+      console.log("data: " + data);
+      console.log("data.list[0].main.temp: " + data.list[index].main.temp);
+      console.log("data.list[0].weather[0].main: " + data.list[index].weather[0].main);
+      console.log("date: " + slotValues.projectDate.synonym);
+
+      mainWeather = data.list[index].weather[0].main;
+
+      if (mainWeather == 'Rain' || mainWeather == 'Snow' || mainWeather == 'Thunderstorm') {
+        console.log("we should not start the project");
+        projectBoolean = 0;
+      }
+
+      if (selectedProject == 'stain') {
+        minTemp = 40;
+        maxTemp = 90;
       } else {
-        outputSpeech = `Sorry.  It is ${data.main.temp} degrees fahrenheit and it is not a great time to paint.`
+        minTemp = 50;
+        maxTemp = 90;
       }
+
+
+      if (Boolean(projectBoolean)) {
+        if ((data.list[index].main.temp > minTemp) || (data.list[index].main.temp < maxTemp)) {
+          console.log("CompletedPlanMyProjectHandler 4");
+          outputSpeech = `The temperature in ${cityName} is ${currentTemperature} degrees fahrenheit.  Congratulations, you can start your ${selectedProject} project!`;
+        } else {
+          console.log("CompletedPlanMyProjectHandler 5");
+          outputSpeech = `Sorry.  It is ${currentTemperature} degrees fahrenheit and it is not a great time to paint.`
+        }
+      } else {
+        outputSpeech = `Sorry.  The forecast will be ${mainWeather}.  The date you selected is not a good day to start your project.`
+      }
+
+
 
     })
     .catch((err) => {
       //set an optional error message here
-      //outputSpeech = err.message;
+      console.log("err: " + err);
+
+      if (err.toString().includes("404")) {
+        outputSpeech = `I am sorry.  I did not find ${cityName} in my search.`;
+        //outputSpeech = err.message;
+      }
+
     });
 
 
 
-    return handlerInput.responseBuilder
+
+
+
+
+
+
+
+
+
+
+    console.log("CompletedPlanMyProjectHandler 6");
+
+
+
+
+
+
+
+
+    return responseBuilder
       .speak(outputSpeech)
       .getResponse();
   },
 };
 
-const MyNameIsIntentHandler = {
+const HelpHandler = {
   canHandle(handlerInput) {
-    console.log('MyNameIsIntentHandler');
-    return handlerInput.requestEnvelope.request.type === 'IntentRequest'
-      && handlerInput.requestEnvelope.request.intent.name === 'MyNameIsIntent';
+    const request = handlerInput.requestEnvelope.request;
+    return request.type === 'IntentRequest' && request.intent.name === 'AMAZON.HelpIntent';
   },
   handle(handlerInput) {
-
-    const nameSlot = handlerInput.requestEnvelope.request.intent.slots.name.value;
-    const speechText = `Hello ${nameSlot}. It's nice to meet you.`;
-
-    return handlerInput.responseBuilder
-      .speak(speechText)
+    const responseBuilder = handlerInput.responseBuilder;
+    return responseBuilder
+      .speak(helpOutput)
+      .reprompt(helpReprompt)
       .getResponse();
   },
 };
 
-const HelpIntentHandler = {
+const CancelStopHandler = {
   canHandle(handlerInput) {
-    console.log('');
-    return handlerInput.requestEnvelope.request.type === 'IntentRequest'
-      && handlerInput.requestEnvelope.request.intent.name === 'AMAZON.HelpIntent';
+    const request = handlerInput.requestEnvelope.request;
+    return request.type === 'IntentRequest' &&
+      (request.intent.name === 'AMAZON.CancelIntent' || request.intent.name === 'AMAZON.StopIntent');
   },
   handle(handlerInput) {
-    const speechText = 'You can introduce yourself by telling me your name';
+    const responseBuilder = handlerInput.responseBuilder;
+    const speechOutput = 'Okay, talk to you later! ';
 
-    return handlerInput.responseBuilder
-      .speak(speechText)
-      .reprompt(speechText)
+    return responseBuilder
+      .speak(speechOutput)
+      .withShouldEndSession(true)
       .getResponse();
   },
 };
 
-const CancelAndStopIntentHandler = {
+const SessionEndedHandler = {
   canHandle(handlerInput) {
-    console.log('');
-    return handlerInput.requestEnvelope.request.type === 'IntentRequest'
-      && (handlerInput.requestEnvelope.request.intent.name === 'AMAZON.CancelIntent'
-        || handlerInput.requestEnvelope.request.intent.name === 'AMAZON.StopIntent');
-  },
-  handle(handlerInput) {
-    const speechText = 'Goodbye!';
-
-    return handlerInput.responseBuilder
-      .speak(speechText)
-      .getResponse();
-  },
-};
-
-const SessionEndedRequestHandler = {
-  canHandle(handlerInput) {
-    console.log('');
-    return handlerInput.requestEnvelope.request.type === 'SessionEndedRequest';
+    const request = handlerInput.requestEnvelope.request;
+    return request.type === 'SessionEndedRequest';
   },
   handle(handlerInput) {
     console.log(`Session ended with reason: ${handlerInput.requestEnvelope.request.reason}`);
-
     return handlerInput.responseBuilder.getResponse();
   },
 };
@@ -213,18 +235,23 @@ const ErrorHandler = {
     return true;
   },
   handle(handlerInput, error) {
-    console.log(`Error handled: ${error.message}`);
+    const request = handlerInput.requestEnvelope.request;
+
+    console.log(`Original Request was: ${JSON.stringify(request, null, 2)}`);
+    console.log(`Error handled: ${error}`);
 
     return handlerInput.responseBuilder
-      .speak('Sorry, I can\'t understand the command. Please say again.')
-      .reprompt('Sorry, I can\'t understand the command. Please say again.')
+      .speak('Sorry, I can not understand the command.  Please say again.')
+      .reprompt('Sorry, I can not understand the command.  Please say again.')
       .getResponse();
   },
 };
 
+// 2. Helper Functions ============================================================================
+
 function getSlotValues(filledSlots) {
   const slotValues = {};
-  console.log("getSlotValues");
+
   console.log(`The filled slots: ${JSON.stringify(filledSlots)}`);
   Object.keys(filledSlots).forEach((item) => {
     const name = filledSlots[item].name;
@@ -236,7 +263,6 @@ function getSlotValues(filledSlots) {
       filledSlots[item].resolutions.resolutionsPerAuthority[0].status.code) {
       switch (filledSlots[item].resolutions.resolutionsPerAuthority[0].status.code) {
         case 'ER_SUCCESS_MATCH':
-        console.log("getSlotValues ER_SUCCESS_MATCH");
           slotValues[name] = {
             synonym: filledSlots[item].value,
             resolved: filledSlots[item].resolutions.resolutionsPerAuthority[0].values[0].value.name,
@@ -244,7 +270,6 @@ function getSlotValues(filledSlots) {
           };
           break;
         case 'ER_SUCCESS_NO_MATCH':
-        console.log("getSlotValues ER_SUCCESS_NO_MATCH");
           slotValues[name] = {
             synonym: filledSlots[item].value,
             resolved: filledSlots[item].value,
@@ -266,6 +291,12 @@ function getSlotValues(filledSlots) {
   return slotValues;
 }
 
+function getRandomPhrase(array) {
+  // the argument is an array [] of words or phrases
+  const i = Math.floor(Math.random() * array.length);
+  return (array[i]);
+}
+
 const getRemoteData = function (url) {
   return new Promise((resolve, reject) => {
     const client = url.startsWith('https') ? require('https') : require('http');
@@ -281,17 +312,16 @@ const getRemoteData = function (url) {
   })
 };
 
+// 4. Exports handler function and setup ===================================================
 const skillBuilder = Alexa.SkillBuilders.custom();
-
 exports.handler = skillBuilder
   .addRequestHandlers(
     LaunchRequestHandler,
-    CityIntetHandler,
-    CompletedCityMatchIntent,
-    MyNameIsIntentHandler,
-    HelpIntentHandler,
-    CancelAndStopIntentHandler,
-    SessionEndedRequestHandler
+    InProgressPlanMyProjectHandler,
+    CompletedPlanMyProjectHandler,
+    CancelStopHandler,
+    HelpHandler,
+    SessionEndedHandler,
   )
   .addErrorHandlers(ErrorHandler)
   .lambda();
